@@ -1,0 +1,49 @@
+# ==========================================================
+# Secrets / local configuration - never commit these
+# ==========================================================
+# holds the real MySQL username + password
+backend/src/main/resources/application.properties
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-*.properties
+!backend/src/main/resources/application.properties.example
+
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+run-local.ps1
+
+# ==========================================================
+# Java / Maven
+# ==========================================================
+target/
+*.class
+*.log
+.mvn/
+mvnw
+mvnw.cmd
+
+# ==========================================================
+# Node / React
+# ==========================================================
+node_modules/
+dist/
+dist-ssr/
+.vite/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+
+# ==========================================================
+# IDE / OS
+# ==========================================================
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.DS_Store
+Thumbs.db

@@ -1,0 +1,25 @@
+# Copy this file to application.properties and fill in your own MySQL login.
+# application.properties is git-ignored so your password is never committed.
+
+spring.application.name=event-pass-management
+# 8080 is used by Jenkins on this machine, so the API runs on 8081
+server.port=8081
+
+# ---------- MySQL ----------
+spring.datasource.url=jdbc:mysql://localhost:3306/event_pass_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+spring.datasource.username=YOUR_MYSQL_USER
+spring.datasource.password=YOUR_MYSQL_PASSWORD
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+# ---------- JPA / Hibernate ----------
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+spring.jpa.open-in-view=false
+
+# ---------- JSON ----------
+spring.jackson.serialization.write-dates-as-timestamps=false
+
+# ---------- CORS (React dev server) ----------
+app.cors.allowed-origins=http://localhost:5173,http://localhost:3000
