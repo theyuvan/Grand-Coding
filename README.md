@@ -2,15 +2,7 @@
 
 A college runs technical events. Students register for an event, get a pass, and check in on
 the event day. Everything in this project comes from one ER diagram and the five modules -
-nothing else was added.
 
-```
-USER  1 ----< REGISTRATION >---- 1  EVENT
-                  1
-                  |
-                0..1
-              CHECK_IN
-```
 
 | Layer    | Technology                        |
 | -------- | --------------------------------- |
@@ -27,24 +19,7 @@ USER  1 ----< REGISTRATION >---- 1  EVENT
 | USER             | `users`          | `user_id` PK, `user_name`, `role`, `email`, `phone_no`, `college`        |
 | EVENT            | `event`          | `event_id` PK, `event_name`, `event_date`, `capacity`, `organizer_id` FK |
 | REGISTRATION     | `registration`   | `reg_id` PK, `stud_id` FK, `event_id` FK, `status`                       |
-| CHECK-IN EVENT   | `check_in_event` | `check_in_id` PK, `reg_id` FK (unique), `check_status`                   |
-
-Relationships, exactly as drawn:
-
-* `USER 1 --- N REGISTRATION` &rarr; `registration.stud_id` &rarr; `users.user_id`
-* `EVENT 1 --- N REGISTRATION` &rarr; `registration.event_id` &rarr; `event.event_id`
-* `REGISTRATION 1 --- 0..1 CHECK_IN` &rarr; `check_in_event.reg_id` is a **unique** FK, so a
-  registration has at most one check-in. The student and the event are already carried by the
-  registration row, which is why the check-in table does not repeat them.
-* `USER --(Creates)--> EVENT` &rarr; `event.organizer_id` &rarr; `users.user_id`
-
-Two constraints carry the rules that the modules describe:
-
-* `UNIQUE (stud_id, event_id)` on `registration` - a student can register once only.
-* `UNIQUE (reg_id)` on `check_in_event` - check-in is allowed only once.
-
-There is **no password column anywhere**, because the ER has none. The frontend therefore uses a
-*simulated login*: you pick the USER row you want to act as.
+| CHECK-IN EVENT   | `check_in_event` | `check_in_id` PK, `reg_id` FK (unique), `check_status`           
 
 ## 2. The modules
 
