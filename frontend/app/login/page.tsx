@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api, type Role, type User } from "@/lib/api";
 import { saveSession } from "@/lib/session";
 import { Notice } from "@/components/app/app-shell";
@@ -14,13 +14,24 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EMPTY_USER = { userName: "", email: "", phoneNo: "", college: "" };
 
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <SimulatedLogin />
+    </Suspense>
+  );
+}
+
 /**
  * Simulated login: there is no password anywhere in the ER, so entering the
- * app means picking the USER row you want to act as.
+ * app means picking the USER row you want to act as. The landing page passes
+ * ?role=STUDENT or ?role=ORGANIZER so you land on the right side straight away.
  */
-export default function LoginPage() {
+function SimulatedLogin() {
   const router = useRouter();
-  const [role, setRole] = useState<Role>("STUDENT");
+  const searchParams = useSearchParams();
+  const requestedRole = searchParams.get("role") === "ORGANIZER" ? "ORGANIZER" : "STUDENT";
+  const [role, setRole] = useState<Role>(requestedRole);
   const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState(EMPTY_USER);
   const [message, setMessage] = useState<{ type: "ok" | "bad"; text: string } | null>(null);
@@ -81,37 +92,44 @@ export default function LoginPage() {
           <Notice message={message} />
         </div>
 
-        <Card className="mt-2">
-          <CardHeader>
-            <CardTitle>{role === "STUDENT" ? "Students" : "Organizers"}</CardTitle>
-            <CardDescription>Click Enter to continue as that user.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {users.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No {role.toLowerCase()} found. Add one below.
-              </p>
-            ) : (
-              <ul className="divide-y divide-foreground/10">
-                {users.map((user) => (
-                  <li key={user.userId} className="flex items-center justify-between gap-4 py-3">
-                    <div>
-                      <p className="text-sm">{user.userName}</p>
-                      <p className="font-mono text-xs text-muted-foreground">
-                        {user.email}
-                        {user.college ? ` · ${user.college}` : ""}
-                        {user.phoneNo ? ` · ${user.phoneNo}` : ""}
-                      </p>
-                    </div>
-                    <Button size="sm" className="rounded-full" onClick={() => enterAs(user)}>
-                      Enter
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+        <h2 className="mt-2 text-sm text-muted-foreground">
+          {role === "STUDENT" ? "Students" : "Organizers"} - click a card to continue as that user.
+        </h2>
+
+        {users.length === 0 ? (
+          <p className="mt-4 text-sm text-muted-foreground">
+            No {role.toLowerCase()} found. Add one below.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {users.map((user) => (
+              <Card
+                key={user.userId}
+                role="button"
+                tabIndex={0}
+                onClick={() => enterAs(user)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") enterAs(user);
+                }}
+                className="cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <CardHeader>
+                  <CardTitle className="text-base leading-snug">{user.userName}</CardTitle>
+                  <CardDescription className="font-mono text-xs">{user.email}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-1 font-mono text-xs text-muted-foreground">
+                    {user.college && <p>{user.college}</p>}
+                    {user.phoneNo && <p>{user.phoneNo}</p>}
+                  </div>
+                  <Button size="sm" className="w-full rounded-full" tabIndex={-1}>
+                    Enter
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         <Card className="mt-6">
           <CardHeader>

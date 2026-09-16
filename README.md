@@ -107,8 +107,9 @@ pnpm install
 pnpm dev
 ```
 
-Open <http://localhost:3000>. The landing page is the entry screen; **Enter as student** /
-**Enter as organizer** both go to `/login`, where you pick the user you want to be.
+Open <http://localhost:3000>. The landing page has two doors: **Enter as student** goes to
+`/login?role=STUDENT` and **Enter as organizer** to `/login?role=ORGANIZER`, each already showing
+the right set of users. Pick the user card you want to be and you land on that portal.
 
 * `/login` - simulated login: pick a STUDENT or an ORGANIZER, or add a new USER row.
 * `/student` - **Events** (Register only) and **My Passes**, where the action follows the date:

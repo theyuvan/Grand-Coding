@@ -2,15 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, type Event, type Registration } from "@/lib/api";
+import { formatDate, today } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { AppShell, Notice, StatusBadge } from "@/components/app/app-shell";
+import { SeatMeter } from "@/components/app/seat-meter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-/** Local calendar date as YYYY-MM-DD - the same day the backend compares against. */
-const today = () => new Date().toLocaleDateString("en-CA");
 
 /**
  * Student side:
@@ -71,158 +69,145 @@ export default function StudentPage() {
           <Notice message={message} />
         </div>
 
+        {/* ---------------- Module 2: register ---------------- */}
         <TabsContent value="events">
-          <Card>
-            <CardHeader>
-              <CardTitle>Events</CardTitle>
-              <CardDescription>Register once per event. A full event is blocked.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {events.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No events available.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Seats left</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {events.map((item) => {
-                      const mine = activeRegistration(item.eventId);
-                      return (
-                        <TableRow key={item.eventId}>
-                          <TableCell>{item.eventName}</TableCell>
-                          <TableCell className="font-mono text-xs">{item.eventDate}</TableCell>
-                          <TableCell className="font-mono text-xs">
+          {events.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No events available.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {events.map((item) => {
+                const mine = activeRegistration(item.eventId);
+                const isFull = item.status === "FULL";
+                return (
+                  <Card
+                    key={item.eventId}
+                    className="group transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-md"
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-3">
+                        <CardTitle className="text-base leading-snug">{item.eventName}</CardTitle>
+                        <StatusBadge value={item.status} />
+                      </div>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {formatDate(item.eventDate)}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <div className="mb-1.5 flex items-baseline justify-between text-xs">
+                          <span className="text-muted-foreground">Seats left</span>
+                          <span className="font-mono">
                             {item.availableSeats} of {item.capacity}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              size="sm"
-                              className="rounded-full"
-                              disabled={Boolean(mine) || item.status === "FULL"}
-                              onClick={() =>
-                                run(
-                                  () =>
-                                    api.register({
-                                      studId: session.userId,
-                                      eventId: item.eventId,
-                                    }),
-                                  (reg) => `Pass created for ${reg.eventName}`
-                                )
-                              }
-                            >
-                              {mine ? "Registered" : item.status === "FULL" ? "Full" : "Register"}
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                          </span>
+                        </div>
+                        <SeatMeter filled={item.registeredCount} capacity={item.capacity} />
+                      </div>
+
+                      <Button
+                        className="w-full rounded-full"
+                        disabled={Boolean(mine) || isFull}
+                        onClick={() =>
+                          run(
+                            () => api.register({ studId: session.userId, eventId: item.eventId }),
+                            (reg) => `Pass created for ${reg.eventName}`
+                          )
+                        }
+                      >
+                        {mine ? "Registered" : isFull ? "Full" : "Register"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
+        {/* ------------- Modules 3 and 4: cancel / check in ------------- */}
         <TabsContent value="passes">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Passes</CardTitle>
-              <CardDescription>
-                Cancel shows before the event day. Check in shows on the event day.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {registrations.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No registrations yet.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Check-in</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {registrations.map((item) => {
-                      const isActive = item.status === "REGISTERED";
-                      const isCheckedIn = item.checkStatus === "CHECKED_IN";
-                      const isEventDay = item.eventDate === today();
-                      const isBeforeEvent = item.eventDate > today();
+          {registrations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No registrations yet.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {registrations.map((item) => {
+                const isActive = item.status === "REGISTERED";
+                const isCheckedIn = item.checkStatus === "CHECKED_IN";
+                const isEventDay = item.eventDate === today();
+                const isBeforeEvent = item.eventDate > today();
 
-                      return (
-                        <TableRow key={item.regId}>
-                          <TableCell>{item.eventName}</TableCell>
-                          <TableCell className="font-mono text-xs">{item.eventDate}</TableCell>
-                          <TableCell>
-                            <StatusBadge value={item.status} />
-                          </TableCell>
-                          <TableCell>
-                            {isCheckedIn ? (
-                              <StatusBadge value="CHECKED_IN" />
-                            ) : (
-                              <span className="font-mono text-xs text-muted-foreground">&mdash;</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {/* Check in: only on the event day */}
-                            {isActive && isEventDay && !isCheckedIn && (
-                              <Button
-                                size="sm"
-                                className="rounded-full"
-                                onClick={() =>
-                                  run(
-                                    () =>
-                                      api.checkIn({
-                                        studId: session.userId,
-                                        eventId: item.eventId,
-                                      }),
-                                    (checkIn) => `Checked in to ${checkIn.eventName}`
-                                  )
-                                }
-                              >
-                                Check in
-                              </Button>
-                            )}
+                return (
+                  <Card
+                    key={item.regId}
+                    className={`transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
+                      isActive ? "hover:border-foreground/25" : "opacity-70"
+                    }`}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-3">
+                        <CardTitle className="text-base leading-snug">{item.eventName}</CardTitle>
+                        <StatusBadge value={item.status} />
+                      </div>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {formatDate(item.eventDate)} &middot; Reg #{item.regId}
+                      </p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between border-t border-foreground/10 pt-3 text-xs">
+                        <span className="text-muted-foreground">Check-in</span>
+                        {isCheckedIn ? (
+                          <StatusBadge value="CHECKED_IN" />
+                        ) : (
+                          <span className="font-mono text-muted-foreground">&mdash;</span>
+                        )}
+                      </div>
 
-                            {/* Cancel: only before the event day */}
-                            {isActive && isBeforeEvent && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="rounded-full"
-                                onClick={() =>
-                                  run(
-                                    () => api.cancelRegistration(item.regId),
-                                    (reg) => `Registration for ${reg.eventName} cancelled`
-                                  )
-                                }
-                              >
-                                Cancel
-                              </Button>
-                            )}
+                      {/* Check in: only on the event day */}
+                      {isActive && isEventDay && !isCheckedIn && (
+                        <Button
+                          className="w-full rounded-full"
+                          onClick={() =>
+                            run(
+                              () => api.checkIn({ studId: session.userId, eventId: item.eventId }),
+                              (checkIn) => `Checked in to ${checkIn.eventName}`
+                            )
+                          }
+                        >
+                          Check in
+                        </Button>
+                      )}
 
-                            {/* Nothing to do: cancelled, already checked in, or the event is over */}
-                            {(!isActive || isCheckedIn || (!isEventDay && !isBeforeEvent)) && (
-                              <span className="font-mono text-xs text-muted-foreground">&mdash;</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+                      {/* Cancel: only before the event day */}
+                      {isActive && isBeforeEvent && (
+                        <Button
+                          variant="outline"
+                          className="w-full rounded-full"
+                          onClick={() =>
+                            run(
+                              () => api.cancelRegistration(item.regId),
+                              (reg) => `Registration for ${reg.eventName} cancelled`
+                            )
+                          }
+                        >
+                          Cancel
+                        </Button>
+                      )}
+
+                      {/* Nothing left to do */}
+                      {(!isActive || isCheckedIn || (!isEventDay && !isBeforeEvent)) && (
+                        <p className="text-center font-mono text-xs text-muted-foreground">
+                          {item.status === "CANCELLED"
+                            ? "Cancelled"
+                            : isCheckedIn
+                              ? "Checked in"
+                              : "Event over"}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </AppShell>

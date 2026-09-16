@@ -2,24 +2,25 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { api, type Event, type EventSummary, type TopEvent } from "@/lib/api";
+import { formatDate } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { AppShell, Notice, StatusBadge } from "@/components/app/app-shell";
+import { SeatMeter, Stat } from "@/components/app/seat-meter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EMPTY_EVENT = { eventName: "", eventDate: "", capacity: "" };
 
-/** An event plus its checked-in count - Module 5's summary in one row. */
+/** An event plus its checked-in count - Module 5's summary in one card. */
 type EventRow = Event & { checkedInCount: number };
 
 /**
  * Organizer side:
  *   Module 1 - Create Event
- *   Module 5 - View Event Summary (the Events table below)
+ *   Module 5 - View Event Summary (the cards below)
  *   SQL Task  - Events with the highest registrations
  */
 export default function OrganizerPage() {
@@ -62,13 +63,15 @@ export default function OrganizerPage() {
         capacity: Number(form.capacity),
       });
       setForm(EMPTY_EVENT);
-      setMessage({ type: "ok", text: `${created.eventName} created for ${created.eventDate}` });
+      setMessage({ type: "ok", text: `${created.eventName} created for ${formatDate(created.eventDate)}` });
       setTab("events");
       loadAll();
     } catch (error) {
       setMessage({ type: "bad", text: (error as Error).message });
     }
   };
+
+  const mostRegistrations = topEvents.length > 0 ? topEvents[0].totalRegistrations : 0;
 
   return (
     <AppShell session={session} onExit={exit}>
@@ -85,51 +88,43 @@ export default function OrganizerPage() {
           <Notice message={message} />
         </div>
 
+        {/* ---------------- Module 5: summary ---------------- */}
         <TabsContent value="events">
-          <Card>
-            <CardHeader>
-              <CardTitle>Event Summary</CardTitle>
-              <CardDescription>
-                Event Name, Capacity, Registered Count and Checked-In Count.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {rows.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No events yet.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Capacity</TableHead>
-                      <TableHead>Registered</TableHead>
-                      <TableHead>Checked in</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rows.map((item) => (
-                      <TableRow key={item.eventId}>
-                        <TableCell>{item.eventName}</TableCell>
-                        <TableCell className="font-mono text-xs">{item.eventDate}</TableCell>
-                        <TableCell className="font-mono text-xs">{item.capacity}</TableCell>
-                        <TableCell className="font-mono text-xs">{item.registeredCount}</TableCell>
-                        <TableCell className="font-mono text-xs">{item.checkedInCount}</TableCell>
-                        <TableCell>
-                          <StatusBadge value={item.status} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          {rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No events yet.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {rows.map((item) => (
+                <Card
+                  key={item.eventId}
+                  className="transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-md"
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-3">
+                      <CardTitle className="text-base leading-snug">{item.eventName}</CardTitle>
+                      <StatusBadge value={item.status} />
+                    </div>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {formatDate(item.eventDate)}
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-2">
+                      <Stat label="Capacity" value={item.capacity} />
+                      <Stat label="Registered" value={item.registeredCount} />
+                      <Stat label="Checked in" value={item.checkedInCount} />
+                    </div>
+                    <SeatMeter filled={item.registeredCount} capacity={item.capacity} />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
+        {/* ---------------- Module 1: create ---------------- */}
         <TabsContent value="create">
-          <Card>
+          <Card className="max-w-2xl">
             <CardHeader>
               <CardTitle>Create Event</CardTitle>
               <CardDescription>
@@ -178,37 +173,34 @@ export default function OrganizerPage() {
           </Card>
         </TabsContent>
 
+        {/* ---------------- SQL task ---------------- */}
         <TabsContent value="top">
-          <Card>
-            <CardHeader>
-              <CardTitle>Highest Registrations</CardTitle>
-              <CardDescription>
-                Event Name and Total Registrations, highest first.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {topEvents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No registrations yet.</p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Total Registrations</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topEvents.map((item) => (
-                      <TableRow key={item.eventName}>
-                        <TableCell>{item.eventName}</TableCell>
-                        <TableCell className="font-mono text-xs">{item.totalRegistrations}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
+          {topEvents.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No registrations yet.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {topEvents.map((item, index) => (
+                <Card
+                  key={item.eventName}
+                  className="transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-md"
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between gap-3">
+                      <CardTitle className="text-base leading-snug">{item.eventName}</CardTitle>
+                      <span className="font-mono text-xs text-muted-foreground">#{index + 1}</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-mono text-3xl leading-none">{item.totalRegistrations}</span>
+                      <span className="text-xs text-muted-foreground">total registrations</span>
+                    </div>
+                    <SeatMeter filled={item.totalRegistrations} capacity={mostRegistrations} />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </AppShell>
