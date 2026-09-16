@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const EMPTY_USER = { userName: "", email: "", phoneNo: "", college: "" };
 
@@ -24,14 +23,15 @@ export default function LoginPage() {
 
 /**
  * Simulated login: there is no password anywhere in the ER, so entering the
- * app means picking the USER row you want to act as. The landing page passes
- * ?role=STUDENT or ?role=ORGANIZER so you land on the right side straight away.
+ * app means picking the USER row you want to act as. The role is already
+ * decided on the landing page and arrives as ?role=STUDENT / ?role=ORGANIZER.
  */
 function SimulatedLogin() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const requestedRole = searchParams.get("role") === "ORGANIZER" ? "ORGANIZER" : "STUDENT";
-  const [role, setRole] = useState<Role>(requestedRole);
+  const role: Role = searchParams.get("role") === "ORGANIZER" ? "ORGANIZER" : "STUDENT";
+  const label = role === "STUDENT" ? "student" : "organizer";
+
   const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState(EMPTY_USER);
   const [message, setMessage] = useState<{ type: "ok" | "bad"; text: string } | null>(null);
@@ -67,41 +67,26 @@ function SimulatedLogin() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl px-6 py-16">
+      <div className="mx-auto max-w-3xl px-6 py-16">
         <Link href="/" className="font-mono text-xs text-muted-foreground hover:text-foreground">
           &larr; Back
         </Link>
 
-        <h1 className="mt-6 font-display text-4xl tracking-tight">Enter the event pass system</h1>
+        <h1 className="mt-6 font-display text-4xl tracking-tight">
+          {role === "STUDENT" ? "Student login" : "Organizer login"}
+        </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Choose who you want to enter as. No password is used - this is a simulated login.
+          Choose your ID to continue. No password is used - this is a simulated login.
         </p>
 
-        <Tabs
-          value={role}
-          onValueChange={(value) => setRole(value as Role)}
-          className="mt-8"
-        >
-          <TabsList>
-            <TabsTrigger value="STUDENT">Student</TabsTrigger>
-            <TabsTrigger value="ORGANIZER">Organizer</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
-        <div className="mt-6">
+        <div className="mt-8">
           <Notice message={message} />
         </div>
 
-        <h2 className="mt-2 text-sm text-muted-foreground">
-          {role === "STUDENT" ? "Students" : "Organizers"} - click a card to continue as that user.
-        </h2>
-
         {users.length === 0 ? (
-          <p className="mt-4 text-sm text-muted-foreground">
-            No {role.toLowerCase()} found. Add one below.
-          </p>
+          <p className="text-sm text-muted-foreground">No {label} found. Add one below.</p>
         ) : (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {users.map((user) => (
               <Card
                 key={user.userId}
@@ -114,7 +99,12 @@ function SimulatedLogin() {
                 className="cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <CardHeader>
-                  <CardTitle className="text-base leading-snug">{user.userName}</CardTitle>
+                  <div className="flex items-start justify-between gap-3">
+                    <CardTitle className="text-base leading-snug">{user.userName}</CardTitle>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      ID {user.userId}
+                    </span>
+                  </div>
                   <CardDescription className="font-mono text-xs">{user.email}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -123,7 +113,7 @@ function SimulatedLogin() {
                     {user.phoneNo && <p>{user.phoneNo}</p>}
                   </div>
                   <Button size="sm" className="w-full rounded-full" tabIndex={-1}>
-                    Enter
+                    Continue
                   </Button>
                 </CardContent>
               </Card>
@@ -131,9 +121,9 @@ function SimulatedLogin() {
           </div>
         )}
 
-        <Card className="mt-6">
+        <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Add a new {role.toLowerCase()}</CardTitle>
+            <CardTitle>Add a new {label}</CardTitle>
             <CardDescription>
               Creates a USER row: user name, role, email, phone no and college.
             </CardDescription>
@@ -178,7 +168,7 @@ function SimulatedLogin() {
                 </div>
               </div>
               <Button type="submit" className="rounded-full">
-                Add {role === "STUDENT" ? "student" : "organizer"}
+                Add {label}
               </Button>
             </form>
           </CardContent>
